@@ -1,5 +1,5 @@
 # ESP32-SIP-CallMonitor
-A call monitor on ESP32 using SIP ( connect via WiFi to a Fritz!Box)
+An Arduino call monitor on ESP32 using SIP ( connect via WiFi to a Fritz!Box)
 
 This sketch connects via WiFi as a SIP telephone e.g. to a Fritz!Box. As soon as the Fritz!Box receives a call for that number, the ESP32 will start a Lightshow on a WS2811 LED Strip.
 
