@@ -7,6 +7,9 @@
    (Created an Arduino library encapsulation from the original code and did
    some beautification)
    
+   Copyright (c) 2020 Ralf Lehmann
+   (added Registration to SIP protocol)
+   
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:

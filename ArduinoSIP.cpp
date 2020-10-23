@@ -5,6 +5,9 @@
 
    Copyright (c) 2019 Thorsten Godau (dl9sec)
    (Created an Arduino library from the original code and did some beautification)
+   
+   Copyright (c) 2020 Ralf Lehmann
+   (added Registration to SIP protocol)
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
