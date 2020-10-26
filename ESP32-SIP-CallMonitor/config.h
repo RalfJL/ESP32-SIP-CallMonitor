@@ -17,8 +17,8 @@ int ssid_count = sizeof(ssid) / sizeof(ssid[0]);
 // Sip parameters
 const char *SipIP       = "192.168.178.1";        // IP of the FRITZ!Box
 const int   SipPORT     = 5060;                 // SIP port of the FRITZ!Box
-const char *SipUSER     = "mySIPUser";           // SIP-Call username at the FRITZ!Box
-const char *SipPW      = "mySIPPW";        // SIP-Call password at the FRITZ!Box
+const char *SipUSER     = "sipUser";           // SIP-Call username at the FRITZ!Box
+const char *SipPW      = "sipUserPW";        // SIP-Call password at the FRITZ!Box
 // SIP Registration parameters
 const int SipEXPIRES   = 600;                   // registration expires in seconds; renew after SipEXPIRES/2
 

@@ -30,42 +30,18 @@ char acSipOut[2048];
 Sip aSip(acSipOut, sizeof(acSipOut));
 
 #include "myFastLED.h"
+MainLED ML;
 
-// for periodic refresh of the registration
-#include <Ticker.h>
-Ticker reregister;
-
-void _reregister() {
-  if (checkWiFi()) {
-    aSip.Subscribe();
-  }
-}
-
-time_t lastRegis = 0;                           // for registration refresh
-
-
-#define NewCallTimeout 40
-time_t ledRuntime;
-time_t ledLastRun;
-time_t newCall = 0;
 char lastCallfrom[256];
 
 void callCallback(const char * from) {
-  log_d("Do a call callback from: %s", from);
-  // check if it is a new call or if the NewCallTimeout has passed
-  if ( !newCall || (millis() - newCall > 1000 * NewCallTimeout)) {
-    log_d("Call timeout has passed: %s", from);
-    strncpy(lastCallfrom, from, 256);
-    ledRuntime = 20;
-    ledLastRun = newCall = millis();
-    return;
-  }
-  if ( strncmp(lastCallfrom, from, 256)) {
-    log_d("New call from: %s", from);
-    strncpy(lastCallfrom, from, 256);
-    ledRuntime = 20; // run for 10 seconds
-    ledLastRun = newCall = millis();
-  }
+  log_d("Received a call from: %s", from);
+  ML.on();
+}
+
+void cancelCallback(const char * from){
+  log_d("Call canceled from: %s", from);
+  ML.off();
 }
 
 
@@ -80,38 +56,18 @@ void setup()
     aSip.Init(SipIP, SipPORT, WiFiIP, SipPORT, SipUSER, SipPW, SipEXPIRES, 15);
     aSip.Subscribe(); // register to receive call notification
     aSip.setCallCallback(callCallback);
+    aSip.setCancelCallback(cancelCallback);
   }
   // start FastLED
   startFastLED();
-  reregister.attach(SipEXPIRES / 2, _reregister);
 }
 
 
 void loop(void)
 {
-  //  // Reregister to SIP telefon
-  //  if ( (millis() - lastRegis) / 1000 > SipEXPIRES / 2) {
-  //    lastRegis = millis();
-  //    aSip.Subscribe();
-  //  }
   // SIP processing incoming packets
-  aSip.Processing(acSipIn, sizeof(acSipIn));
+  aSip.loop(acSipIn, sizeof(acSipIn)); // handels incoming calls and reregisters
 
-  // if we received a call notification we start the lightshow
-  if ( ledRuntime) {
-    if ( millis() - ledLastRun > 1000) {
-      ledLastRun = millis();
-      ledRuntime--;
-    }
-    //sinelon();
-    //bpm();
-    juggle();
-    // send the 'leds' array out to the actual LED strip
-    FastLED.show();
-    // insert a delay to keep the framerate modest
-    FastLED.delay(1000 / FRAMES_PER_SECOND);
-  } else {
-    FastLED.clear();
-    FastLED.show();
-  }
+  ML.loop(); // keeps animation alive; and adds a delay
+
 }

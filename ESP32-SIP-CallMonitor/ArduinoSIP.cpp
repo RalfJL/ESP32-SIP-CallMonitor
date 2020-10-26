@@ -5,9 +5,10 @@
 
    Copyright (c) 2019 Thorsten Godau (dl9sec)
    (Created an Arduino library from the original code and did some beautification)
-   
+
    Copyright (c) 2020 Ralf Lehmann
-   (added Registration to SIP protocol)
+   (added registration and ticker to renew registration
+    added Ringing and CANCEL )
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -41,6 +42,8 @@
 #include <MD5Builder.h>
 
 #include "ArduinoSIP.h"
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -79,10 +82,6 @@ void Sip::Init(const char *SipIp, int SipPort, const char *MyIp, int MyPort, con
   iRingTime = 0;
   iRegTime = RegTimeout;
   iMaxTime = MaxDialSec * 1000;
-}
-
-void Sip::setCallCallback(void (*callback)(const char * from)){
-  fcalCallback = callback;
 }
 
 
@@ -169,9 +168,10 @@ void Sip::HandleUdpPacket(const char *p) {
     log_d("Incoming call");
     char from[256];
     ParseParameter(from, 256, "From:", p, '\n');
-    if ( fcalCallback ){
-      (*fcalCallback)(from);
+    if ( fcallCallback ) {
+      (*fcallCallback)(from);
     }
+    Ringing(p);
     //ParseReturnParams(p);
   }
   else if ( strstr(p, "BYE") == p )
@@ -206,6 +206,16 @@ void Sip::HandleUdpPacket(const char *p) {
   else if (strstr(p, "INFO") == p)
   {
     iLastCSeq = GrepInteger(p, "\nCSeq: ");
+    Ok(p);
+  }
+  else if (strstr(p, "CANCEL") == p)
+  {
+    iLastCSeq = GrepInteger(p, "\nCSeq: ");
+    char from[256];
+    ParseParameter(from, 256, "From:", p, '\n');
+    if ( fcancelCallback ) {
+      (*fcancelCallback)(from);
+    }
     Ok(p);
   }
 
@@ -315,10 +325,6 @@ int Sip::GrepInteger(const char *p, const char *psearch) {
 }
 
 
-void Sip::Subscribe() {
-  Register();
-}
-
 
 void Sip::Ack(const char *p) {
 
@@ -381,6 +387,20 @@ void Sip::Ok(const char *p) {
 
   pbuf[0] = 0;
   AddSipLine("SIP/2.0 200 OK");
+  AddCopySipLine(p, "Call-ID: ");
+  AddCopySipLine(p, "CSeq: ");
+  AddCopySipLine(p, "From: ");
+  AddCopySipLine(p, "Via: ");
+  AddCopySipLine(p, "To: ");
+  AddSipLine("Content-Length: 0");
+  AddSipLine("");
+  SendUdp();
+}
+
+void Sip::Ringing(const char *p) {
+
+  pbuf[0] = 0;
+  AddSipLine("SIP/2.0 180 Ringing");
   AddCopySipLine(p, "Call-ID: ");
   AddCopySipLine(p, "CSeq: ");
   AddCopySipLine(p, "From: ");
@@ -565,6 +585,38 @@ void Sip::Register(const char *p) {
   AddSipLine("");
   caRead[0] = 0;
   SendUdp();
+}
+
+void Sip::setCallCallback(void (*callback)(const char * from)) {
+  fcallCallback = callback;
+}
+
+void Sip::setCancelCallback(void (*cancelback)(const char * from)) {
+  fcancelCallback = cancelback;
+}
+
+
+volatile bool need_to_reregister = false;
+// Call this ticker like an ISR
+// be short and don't handle any hardware
+void callbackReregister() {
+  need_to_reregister = true;
+}
+
+
+void Sip::Subscribe(int expire) {
+  regExpire = expire;
+  Register();
+  reregister.attach(expire / 2, callbackReregister);
+}
+
+void Sip::loop(char *acSipIn, int len) {
+  // SIP processing incoming packets
+  Processing(acSipIn, len);
+  if ( need_to_reregister) {
+    need_to_reregister = false;
+    Register();
+  }
 }
 
 
